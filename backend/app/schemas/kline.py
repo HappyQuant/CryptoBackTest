@@ -4,13 +4,13 @@ from typing import List, Optional
 
 
 class KlineBase(BaseModel):
-    open_time: datetime
+    open_time: str
     open: float
     high: float
     low: float
     close: float
     volume: float
-    close_time: datetime
+    close_time: str
     quote_asset_volume: float = 0
     number_of_trades: int = 0
     taker_buy_base_asset_volume: float = 0
@@ -23,12 +23,7 @@ class KlineCreate(KlineBase):
 
 
 class KlineResponse(KlineBase):
-    id: int
-    symbol: str
-    interval: str
-    
-    class Config:
-        from_attributes = True
+    pass
 
 
 class KlineListResponse(BaseModel):

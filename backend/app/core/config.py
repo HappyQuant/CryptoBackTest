@@ -1,18 +1,25 @@
 from pydantic_settings import BaseSettings
 from typing import List
+import os
 
 
 class Settings(BaseSettings):
-    # 数据库配置（使用异步驱动）
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/cryptobacktest"
-    
-    # Redis缓存配置
+    DATABASE_URL: str = ""
+
     REDIS_URL: str = "redis://localhost:6379/0"
-    
-    # CORS配置
-    CORS_ORIGINS: List[str] = ["*"]
-    
-    # 交易对配置
+
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
+
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ]
+
+    RATE_LIMIT_PER_SECOND: int = 30
+    RATE_LIMIT_PER_MINUTE: int = 1000
+
     CONFIG_SYMBOLS: List[str] = [
         "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
         "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "DOTUSDT", "MATICUSDT",

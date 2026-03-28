@@ -7,6 +7,10 @@ from collections import deque
 from datetime import datetime
 from enum import Enum
 
+class SecurityError(Exception):
+    """安全错误异常，用于策略代码安全检查"""
+    pass
+
 # ==================== 枚举定义 ====================
 
 class OrderType(Enum):
@@ -368,8 +372,77 @@ def run_backtest(strategy_code: str, kline_data_list: list, params: dict) -> dic
             'equityCurve': []
         }
     
-    # 创建全局命名空间
+    import ast
+    
+    FORBIDDEN_NAMES = {
+        'open', 'eval', 'exec', 'compile', '__import__',
+        'globals', 'locals', 'vars', 'dir',
+        'getattr', 'setattr', 'delattr', 'hasattr',
+        'input', 'breakpoint'
+    }
+    
+    FORBIDDEN_MODULES = {
+        'os', 'sys', 'subprocess', 'socket', 'requests',
+        'urllib', 'http', 'ftplib', 'smtplib', 'telnetlib',
+        'poplib', 'imaplib', 'nntplib', 'popen2',
+        'commands', 'pty', 'fcntl', 'pipes', 'posix',
+        'posixpath', 'shutil', 'tempfile', 'glob',
+        'pickle', 'shelve', 'marshal', 'imp', 'importlib',
+        'code', 'codeop', 'codecs', 'pdb', 'trace', 'traceback'
+    }
+    
+    class SecurityVisitor(ast.NodeVisitor):
+        def __init__(self):
+            self.violations = []
+        
+        def visit_Import(self, node):
+            for alias in node.names:
+                module_name = alias.name.split('.')[0]
+                if module_name in FORBIDDEN_MODULES:
+                    self.violations.append(f"Forbidden import: {alias.name}")
+            self.generic_visit(node)
+        
+        def visit_ImportFrom(self, node):
+            if node.module:
+                module_name = node.module.split('.')[0]
+                if module_name in FORBIDDEN_MODULES:
+                    self.violations.append(f"Forbidden import from: {node.module}")
+            self.generic_visit(node)
+        
+        def visit_Call(self, node):
+            if isinstance(node.func, ast.Name):
+                if node.func.id in FORBIDDEN_NAMES:
+                    self.violations.append(f"Forbidden function call: {node.func.id}")
+            self.generic_visit(node)
+    
+    try:
+        tree = ast.parse(strategy_code)
+        visitor = SecurityVisitor()
+        visitor.visit(tree)
+        
+        if visitor.violations:
+            raise SecurityError(f"Security violations detected: {', '.join(visitor.violations)}")
+    except SyntaxError as e:
+        raise SyntaxError(f"Strategy code syntax error: {e}")
+    
+    safe_builtins = {
+        'abs': abs, 'all': all, 'any': any, 'bool': bool,
+        'dict': dict, 'enumerate': enumerate, 'filter': filter,
+        'float': float, 'frozenset': frozenset, 'int': int,
+        'isinstance': isinstance, 'len': len, 'list': list,
+        'map': map, 'max': max, 'min': min, 'pow': pow,
+        'print': print, 'range': range, 'reversed': reversed,
+        'round': round, 'set': set, 'slice': slice,
+        'sorted': sorted, 'str': str, 'sum': sum, 'tuple': tuple,
+        'type': type, 'zip': zip, 'True': True, 'False': False,
+        'None': None, 'Exception': Exception, 'ValueError': ValueError,
+        'TypeError': TypeError, 'KeyError': KeyError, 'IndexError': IndexError,
+        'RuntimeError': RuntimeError, 'StopIteration': StopIteration,
+        'NotImplementedError': NotImplementedError
+    }
+    
     global_ns = {
+        '__builtins__': safe_builtins,
         'IStrategy': IStrategy,
         'KlineCache': KlineCache,
         'Kline': Kline,
@@ -378,12 +451,15 @@ def run_backtest(strategy_code: str, kline_data_list: list, params: dict) -> dic
         'BacktestContext': BacktestContext,
         'deque': deque,
         'Decimal': Decimal,
-        'datetime': datetime
+        'datetime': datetime,
+        'calculate_sma': calculate_sma,
+        'calculate_ema': calculate_ema,
+        'calculate_rsi': calculate_rsi,
+        'calculate_macd': calculate_macd
     }
     
     local_ns = {}
     
-    # 执行用户策略代码
     exec(strategy_code, global_ns, local_ns)
     
     # 获取Strategy类
@@ -471,20 +547,39 @@ def calculate_rsi(data: list, period: int = 14) -> float:
     return 100 - (100 / (1 + rs))
 
 def calculate_macd(data: list, fast: int = 12, slow: int = 26, signal: int = 9) -> tuple:
-    """计算MACD指标"""
-    if len(data) < slow:
+    """计算MACD指标
+    
+    MACD = EMA(fast) - EMA(slow)
+    Signal = EMA(MACD, signal_period)
+    Histogram = MACD - Signal
+    """
+    if len(data) < slow + signal:
         return None, None, None
     
-    ema_fast = calculate_ema(data, fast)
-    ema_slow = calculate_ema(data, slow)
+    ema_fast_list = []
+    ema_slow_list = []
+    macd_list = []
     
-    if ema_fast is None or ema_slow is None:
+    multiplier_fast = 2 / (fast + 1)
+    multiplier_slow = 2 / (slow + 1)
+    multiplier_signal = 2 / (signal + 1)
+    
+    ema_fast = sum(data[:fast]) / fast
+    ema_slow = sum(data[:slow]) / slow
+    
+    for i in range(slow, len(data)):
+        ema_fast = (data[i] - ema_fast) * multiplier_fast + ema_fast
+        ema_slow = (data[i] - ema_slow) * multiplier_slow + ema_slow
+        macd_list.append(ema_fast - ema_slow)
+    
+    if len(macd_list) < signal:
         return None, None, None
     
-    macd_line = ema_fast - ema_slow
+    signal_line = sum(macd_list[:signal]) / signal
+    for macd_val in macd_list[signal:]:
+        signal_line = (macd_val - signal_line) * multiplier_signal + signal_line
     
-    # 计算signal线需要macd的历史数据，这里简化处理
-    signal_line = macd_line * 0.9  # 简化
+    macd_line = macd_list[-1]
     histogram = macd_line - signal_line
     
     return macd_line, signal_line, histogram
@@ -492,6 +587,6 @@ def calculate_macd(data: list, fast: int = 12, slow: int = 26, signal: int = 9) 
 # 导出所有模块
 __all__ = [
     'Kline', 'KlineCache', 'Order', 'OrderType', 'OrderSide',
-    'BacktestContext', 'IStrategy', 'run_backtest',
+    'BacktestContext', 'IStrategy', 'run_backtest', 'SecurityError',
     'calculate_sma', 'calculate_ema', 'calculate_rsi', 'calculate_macd'
 ]

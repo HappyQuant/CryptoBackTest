@@ -12,6 +12,7 @@ python-dotenv = "*"
 redis = {extras = ["async"], version = "*"}
 pydantic-settings = "*"
 pydantic = "*"
+slowapi = "*"
 
 [dev-packages]
 pytest = "*"

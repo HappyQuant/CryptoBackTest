@@ -1,8 +1,10 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from app.core.config import settings
 
-# 异步数据库引擎
-async_engine = create_async_engine(settings.DATABASE_URL, echo=True)
+async_engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG
+)
 
 # 异步会话工厂
 AsyncSessionLocal = async_sessionmaker(
