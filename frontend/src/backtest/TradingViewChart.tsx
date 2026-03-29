@@ -10,6 +10,14 @@ interface TradingViewChartProps {
   equityCurve?: { timestamp: string; equity: number }[];
 }
 
+interface CrosshairData {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
 const lightTheme = {
   layout: {
     background: { color: '#ffffff' },
@@ -70,6 +78,7 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
   const equitySeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const [isDark, setIsDark] = useState(false);
   const [chartsReady, setChartsReady] = useState(false);
+  const [crosshairData, setCrosshairData] = useState<CrosshairData | null>(null);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -111,6 +120,23 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
 
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
+
+    chart.subscribeCrosshairMove((param) => {
+      if (param && param.seriesData && param.seriesData.size > 0) {
+        const data = param.seriesData.get(candlestickSeries);
+        if (data) {
+          setCrosshairData({
+            time: data.time as string,
+            open: data.open,
+            high: data.high,
+            low: data.low,
+            close: data.close,
+          });
+        }
+      } else {
+        setCrosshairData(null);
+      }
+    });
 
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
@@ -311,6 +337,18 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
           <span className="chart-info">
             {klines[0]?.open_time?.slice(0, 10)} ~ {klines[klines.length - 1]?.open_time?.slice(0, 10)}
           </span>
+        )}
+        {crosshairData && (
+          <div className="ohl-tooltip">
+            <span className="ohl-label o">O</span>
+            <span className="ohl-value">{crosshairData.open.toLocaleString()}</span>
+            <span className="ohl-label h">H</span>
+            <span className="ohl-value">{crosshairData.high.toLocaleString()}</span>
+            <span className="ohl-label l">L</span>
+            <span className="ohl-value">{crosshairData.low.toLocaleString()}</span>
+            <span className="ohl-label c">C</span>
+            <span className="ohl-value">{crosshairData.close.toLocaleString()}</span>
+          </div>
         )}
       </div>
       <div className="chart-wrapper" ref={chartContainerRef} />
