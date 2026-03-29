@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useI18n, strategyTemplates } from '../i18n';
 import { highlightPython } from './pythonHighlighter';
 import './StrategyEditor.css';
 
@@ -9,32 +10,12 @@ interface StrategyEditorProps {
   onOpenDocs?: () => void;
 }
 
-const DEFAULT_STRATEGY = `from IStrategy import IStrategy
-from Kline import Kline
-from BacktestContext import BacktestContext
-from calculate_sma import calculate_sma
-
-class Strategy(IStrategy):
-    def run(self, context: BacktestContext, kline: Kline, params: dict):
-        closes = self.kline_cache.get_closes()
-
-        if len(closes) < params.get('ma_period', 20):
-            return
-
-        ma = calculate_sma(closes, params.get('ma_period', 20))
-
-        if closes[-1] > ma and closes[-2] <= ma:
-            if context.position == 0:
-                context.buy(kline.close, params.get('buy_amount', 0.1), kline.open_time)
-
-        if closes[-1] < ma and closes[-2] >= ma:
-            if context.position > 0:
-                context.sell_all(kline.close, kline.open_time)
-`;
-
 export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: StrategyEditorProps) {
+  const { t, language } = useI18n();
   const [lineCount, setLineCount] = useState(1);
   const [highlightedCode, setHighlightedCode] = useState('');
+  const [isUserModified, setIsUserModified] = useState(false);
+  const prevLanguageRef = useRef(language);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const codeRef = useRef<HTMLPreElement>(null);
 
@@ -43,8 +24,17 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
     setLineCount(code.split('\n').length);
   }, [code]);
 
+  useEffect(() => {
+    if (prevLanguageRef.current !== language && !isUserModified) {
+      onChange(strategyTemplates[language]);
+    }
+    prevLanguageRef.current = language;
+  }, [language, isUserModified, onChange]);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
+    const isTemplate = value === strategyTemplates['zh'] || value === strategyTemplates['en'];
+    setIsUserModified(!isTemplate);
     onChange(value);
   };
 
@@ -59,7 +49,8 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
   };
 
   const handleLoadTemplate = () => {
-    onChange(DEFAULT_STRATEGY);
+    setIsUserModified(false);
+    onChange(strategyTemplates[language]);
   };
 
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
@@ -67,14 +58,14 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
   return (
     <div className="strategy-editor">
       <div className="editor-header">
-        <span className="editor-title">策略代码</span>
+        <span className="editor-title">{t('editor.title')}</span>
         <div className="editor-actions">
           <button className="btn btn-ghost btn-small" onClick={handleLoadTemplate} disabled={isRunning}>
-            加载模板
+            {t('editor.loadTemplate')}
           </button>
           {onOpenDocs && (
             <button className="btn btn-ghost btn-small" onClick={onOpenDocs} disabled={isRunning}>
-              📖 策略手册
+              📖 {t('editor.strategyManual')}
             </button>
           )}
         </div>
@@ -96,17 +87,12 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
             onScroll={handleScroll}
             disabled={isRunning}
             spellCheck={false}
-            placeholder="在这里编写你的Python策略代码..."
+            placeholder={t('editor.placeholder')}
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
           />
         </div>
-      </div>
-      <div className="editor-footer">
-        <span className="editor-info">
-          Python | 行 {lineCount}
-        </span>
       </div>
     </div>
   );

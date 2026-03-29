@@ -1,22 +1,27 @@
 import { useState } from 'react';
+import { I18nProvider, useI18n } from './i18n';
 import { BacktestPanel } from './backtest/BacktestPanel';
 import { StrategyDocs } from './backtest/StrategyDocs';
 import './App.css';
 
-function App() {
+function BackButton({ onClick }: { onClick: () => void }) {
+  const { t, language } = useI18n();
+  return (
+    <button className="back-button" onClick={onClick}>
+      ← {t('docs.backToBacktest')}
+    </button>
+  );
+}
+
+function AppContent() {
   const [currentPage, setCurrentPage] = useState<'backtest' | 'docs'>('backtest');
 
   if (currentPage === 'docs') {
     return (
-      <div>
-        <button 
-          className="back-button" 
-          onClick={() => setCurrentPage('backtest')}
-        >
-          ← 返回回测系统
-        </button>
+      <>
+        <BackButton onClick={() => setCurrentPage('backtest')} />
         <StrategyDocs />
-      </div>
+      </>
     );
   }
 
@@ -24,6 +29,14 @@ function App() {
     <BacktestPanel 
       onOpenDocs={() => setCurrentPage('docs')} 
     />
+  );
+}
+
+function App() {
+  return (
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   );
 }
 

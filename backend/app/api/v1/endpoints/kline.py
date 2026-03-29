@@ -72,7 +72,7 @@ async def get_klines(
     query = select(KlineModel)
 
     if start_time:
-        query = query.where(KlineModel.open_time >= start_time)
+        query = query.where(KlineModel.open_time > start_time)
     if end_time:
         query = query.where(KlineModel.open_time <= end_time)
 

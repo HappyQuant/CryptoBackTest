@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useI18n, strategyTemplates } from '../i18n';
 import { BacktestConfig } from './BacktestConfig';
 import { StrategyEditor } from './StrategyEditor';
 import { TradingViewChart } from './TradingViewChart';
 import { BacktestResultDisplay } from './BacktestResult';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { LanguageSwitch } from '../components/LanguageSwitch';
 import type { BacktestConfig as Config, BacktestResult, Kline, Trade } from './types';
 import { getSymbols, getIntervals } from './KlineService';
 import { KlineCache } from './KlineCache';
@@ -14,59 +16,8 @@ interface BacktestPanelProps {
   onOpenDocs: () => void;
 }
 
-const DEFAULT_STRATEGY = `# 策略类必须继承自 IStrategy
-class Strategy(IStrategy):
-    """
-    简单移动平均线交叉策略示例
-    
-    策略逻辑：
-    1. 计算收盘价的移动平均线(MA)
-    2. 当价格从下方突破MA时，买入
-    3. 当价格从上方跌破MA时，卖出全部持仓
-    """
-    
-    def run(self, context: BacktestContext, kline: Kline, params: dict):
-        """
-        策略主函数，每根K线都会调用一次
-        
-        参数说明：
-        - context: 回测上下文，包含账户信息和交易方法
-        - kline: 当前K线数据对象
-        - params: 策略参数字典
-        """
-        
-        # 从缓存中获取所有历史收盘价
-        # self.kline_cache 是框架自动维护的K线缓存
-        closes = self.kline_cache.get_closes()
-        
-        # 获取MA周期参数，默认20
-        ma_period = params.get('ma_period', 20)
-        
-        # 如果数据不足，直接返回
-        if len(closes) < ma_period:
-            return
-        
-        # 计算简单移动平均线
-        # calculate_sma 是框架提供的内置函数
-        ma = calculate_sma(closes, ma_period)
-        
-        # 获取买入数量参数，默认0.1个币
-        buy_amount = params.get('buy_amount', 0.1)
-        
-        # 买入信号：价格从下方突破MA
-        # closes[-1] 是最新收盘价，closes[-2] 是上一根收盘价
-        if closes[-1] > ma and closes[-2] <= ma:
-            # context.buy(价格, 数量, 时间戳) 执行买入
-            # 买入前会自动检查余额是否充足
-            context.buy(kline.close, buy_amount, kline.open_time)
-        
-        # 卖出信号：价格从上方跌破MA
-        if closes[-1] < ma and closes[-2] >= ma:
-            # context.sell_all(价格, 时间戳) 卖出全部持仓
-            context.sell_all(kline.close, kline.open_time)
-`;
-
 export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
+  const { t, language } = useI18n();
   const [symbols, setSymbols] = useState<string[]>([]);
   const [intervals, setIntervals] = useState<string[]>([]);
   const [config, setConfig] = useState<Config>({
@@ -77,7 +28,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
     initialBalance: 10000,
     feeRate: 0.001,
   });
-  const [code, setCode] = useState<string>(DEFAULT_STRATEGY);
+  const [code, setCode] = useState<string>(() => strategyTemplates[language]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPyodideReady, setIsPyodideReady] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -131,7 +82,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
 
   const handleStart = useCallback(async () => {
     if (!isPyodideReady) {
-      alert('Pyodide 环境尚未加载完成');
+      alert(language === 'zh' ? 'Pyodide 环境尚未加载完成' : 'Pyodide environment is not ready');
       return;
     }
 
@@ -139,7 +90,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
     setKlines([]);
     setTrades([]);
     setResult(null);
-    setProgress('正在加载K线数据...');
+    setProgress(language === 'zh' ? '正在加载K线数据...' : 'Loading K-line data...');
 
     try {
       const cache = new KlineCache(
@@ -171,15 +122,15 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
 
         if (allKlines.length % 500 === 0) {
           setKlines([...allKlines]);
-          setProgress(`已加载 ${allKlines.length} 根K线...`);
+          setProgress(language === 'zh' ? `已加载 ${allKlines.length} 根K线...` : `Loaded ${allKlines.length} K-lines...`);
         }
       }
 
       setKlines(allKlines);
-      setProgress(`共加载 ${allKlines.length} 根K线，开始回测...`);
+      setProgress(language === 'zh' ? `共加载 ${allKlines.length} 根K线，开始回测...` : `Loaded ${allKlines.length} K-lines, starting backtest...`);
 
       if (allKlines.length === 0) {
-        alert('没有K线数据，请检查后端服务是否正常');
+        alert(language === 'zh' ? '没有K线数据，请检查后端服务是否正常' : 'No K-line data, please check backend service');
         setIsRunning(false);
         return;
       }
@@ -190,7 +141,10 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
         config.initialBalance,
         config.feeRate,
         (progressInfo) => {
-          setProgress(`回测进度: ${progressInfo.processedKlines}/${progressInfo.totalKlines} (${Math.round(progressInfo.processedKlines / progressInfo.totalKlines * 100)}%)`);
+          const progressText = language === 'zh' 
+            ? `回测进度: ${progressInfo.processedKlines}/${progressInfo.totalKlines} (${Math.round(progressInfo.processedKlines / progressInfo.totalKlines * 100)}%)`
+            : `Backtest progress: ${progressInfo.processedKlines}/${progressInfo.totalKlines} (${Math.round(progressInfo.processedKlines / progressInfo.totalKlines * 100)}%)`;
+          setProgress(progressText);
           setTrades(progressInfo.trades);
           setResult({
             initialBalance: config.initialBalance,
@@ -219,17 +173,17 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
 
       setResult(backtestResult);
       setTrades(backtestResult.trades || []);
-      setProgress('回测完成');
+      setProgress(language === 'zh' ? '回测完成' : 'Backtest completed');
       
       console.log('After setState, trades will be:', backtestResult.trades || []);
     } catch (error) {
       console.error('Backtest failed:', error);
-      alert('回测失败: ' + (error as Error).message);
+      alert((language === 'zh' ? '回测失败: ' : 'Backtest failed: ') + (error as Error).message);
       setProgress('');
     } finally {
       setIsRunning(false);
     }
-  }, [config, code, isPyodideReady]);
+  }, [config, code, isPyodideReady, language]);
 
   const handleStop = useCallback(() => {
     setIsRunning(false);
@@ -240,15 +194,16 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
     <div className="backtest-panel">
       <header className="panel-header">
         <div className="header-left">
-          <h1 className="panel-title">Crypto量化回测系统</h1>
+          <h1 className="panel-title">{t('app.title')}</h1>
           {progress && <span className="progress-text">{progress}</span>}
         </div>
         <div className="header-right">
-          <button className="theme-toggle" onClick={toggleTheme} title={`切换到${theme === 'light' ? '暗色' : '亮色'}主题`}>
+          <LanguageSwitch />
+          <button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? (language === 'zh' ? '切换到暗色主题' : 'Switch to dark theme') : (language === 'zh' ? '切换到亮色主题' : 'Switch to light theme')}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
           <span className={`status-badge ${isPyodideReady ? 'ready' : 'loading'}`}>
-            {isPyodideReady ? '✓ Pyodide就绪' : '⏳ 加载中...'}
+            {isPyodideReady ? t('header.pyodideReady') : t('header.pyodideLoading')}
           </span>
         </div>
       </header>

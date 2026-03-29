@@ -42,10 +42,18 @@ export class KlineCache {
         
         if (newKlines.length > 0) {
           this.klines = [...this.klines, ...newKlines];
+          this.klines.sort((a, b) => new Date(a.open_time).getTime() - new Date(b.open_time).getTime());
         }
         this.lastFetchCount = response.data.length;
 
+        if (newKlines.length !== response.data.length) {
+          console.warn(`Filtered ${response.data.length - newKlines.length} duplicate klines`);
+        }
+
         const lastKline = response.data[response.data.length - 1];
+        const firstKline = response.data[0];
+        console.log(`Fetched ${response.data.length} klines: ${firstKline.open_time} to ${lastKline.open_time}`);
+        
         this.startTime = lastKline.open_time;
 
         if (response.data.length < PAGE_SIZE) {

@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import type { BacktestConfig } from './types';
 import './BacktestConfig.css';
 
@@ -12,7 +13,7 @@ interface BacktestConfigProps {
   isLoading: boolean;
 }
 
-export function BacktestConfig({
+export function BacktestConfigComponent({
   config,
   symbols,
   intervals,
@@ -22,6 +23,8 @@ export function BacktestConfig({
   isRunning,
   isLoading,
 }: BacktestConfigProps) {
+  const { t } = useI18n();
+
   const handleChange = (field: keyof BacktestConfig, value: string | number) => {
     onChange({ ...config, [field]: value });
   };
@@ -29,12 +32,12 @@ export function BacktestConfig({
   return (
     <div className="backtest-config">
       <div className="config-header">
-        <h2 className="config-title">回测配置</h2>
+        <h2 className="config-title">{t('config.title')}</h2>
       </div>
 
       <div className="config-form">
         <div className="form-group">
-          <label className="form-label">交易对</label>
+          <label className="form-label">{t('config.symbol')}</label>
           <select
             className="select"
             value={config.symbol}
@@ -50,7 +53,7 @@ export function BacktestConfig({
         </div>
 
         <div className="form-group">
-          <label className="form-label">K线周期</label>
+          <label className="form-label">{t('config.interval')}</label>
           <select
             className="select"
             value={config.interval}
@@ -66,7 +69,7 @@ export function BacktestConfig({
         </div>
 
         <div className="form-group">
-          <label className="form-label">开始时间</label>
+          <label className="form-label">{t('config.startTime')}</label>
           <input
             type="date"
             className="input"
@@ -77,7 +80,7 @@ export function BacktestConfig({
         </div>
 
         <div className="form-group">
-          <label className="form-label">结束时间</label>
+          <label className="form-label">{t('config.endTime')}</label>
           <input
             type="date"
             className="input"
@@ -88,7 +91,7 @@ export function BacktestConfig({
         </div>
 
         <div className="form-group">
-          <label className="form-label">初始金额 (USD)</label>
+          <label className="form-label">{t('config.initialBalance')} (USD)</label>
           <input
             type="number"
             className="input"
@@ -101,7 +104,7 @@ export function BacktestConfig({
         </div>
 
         <div className="form-group">
-          <label className="form-label">手续费率 (%)</label>
+          <label className="form-label">{t('config.feeRate')} (%)</label>
           <input
             type="number"
             className="input"
@@ -124,18 +127,20 @@ export function BacktestConfig({
           {isLoading ? (
             <>
               <span className="spinner"></span>
-              加载中...
+              {t('config.loading')}
             </>
           ) : (
-            '▶ 开始回测'
+            `▶ ${t('config.startBacktest')}`
           )}
         </button>
         {isRunning && (
           <button className="btn btn-danger btn-full" onClick={onStop}>
-            ⏹ 停止回测
+            ⏹ {t('config.stopBacktest')}
           </button>
         )}
       </div>
     </div>
   );
 }
+
+export const BacktestConfig = BacktestConfigComponent;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, Time } from 'lightweight-charts';
+import { useI18n } from '../i18n';
 import type { Kline, Trade } from './types';
 import './TradingViewChart.css';
 
@@ -60,6 +61,7 @@ function formatTimeToUTC(isoString: string): string {
 }
 
 export function TradingViewChart({ klines, trades, equityCurve }: TradingViewChartProps) {
+  const { t, language } = useI18n();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const equityContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -304,7 +306,7 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
   return (
     <div className="tradingview-chart-container">
       <div className="chart-header">
-        <span className="chart-title">K线图表</span>
+        <span className="chart-title">{t('chart.klineChart')}</span>
         {klines.length > 0 && (
           <span className="chart-info">
             {klines[0]?.open_time?.slice(0, 10)} ~ {klines[klines.length - 1]?.open_time?.slice(0, 10)}
@@ -313,38 +315,38 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
       </div>
       <div className="chart-wrapper" ref={chartContainerRef} />
       <div className="equity-header">
-        <span className="chart-title">权益曲线</span>
+        <span className="chart-title">{t('chart.equityCurve')}</span>
       </div>
       <div className="equity-wrapper" ref={equityContainerRef} />
       <div className="trades-section">
-        <h4 className="section-title">成交记录 ({trades?.length || 0})</h4>
+        <h4 className="section-title">{t('chart.tradeRecords')} ({trades?.length || 0})</h4>
         <div className="trades-table-wrapper">
           <table className="trades-table">
             <thead>
               <tr>
-                <th>时间</th>
-                <th>类型</th>
-                <th>价格</th>
-                <th>数量</th>
-                <th>手续费</th>
-                <th>持币</th>
-                <th>持仓市值</th>
-                <th>当前金额</th>
-                <th>总市值</th>
+                <th>{t('trades.time')}</th>
+                <th>{t('trades.type')}</th>
+                <th>{t('trades.price')}</th>
+                <th>{t('trades.amount')}</th>
+                <th>{t('trades.fee')}</th>
+                <th>{t('trades.balance')}</th>
+                <th>{t('trades.positionValue')}</th>
+                <th>{language === 'zh' ? '当前金额' : 'Balance'}</th>
+                <th>{t('trades.totalValue')}</th>
               </tr>
             </thead>
             <tbody>
               {!trades || trades.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="empty-trades">暂无成交记录</td>
+                  <td colSpan={9} className="empty-trades">{t('trades.noTrades')}</td>
                 </tr>
               ) : (
-                trades.map((trade, index) => (
+                [...trades].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((trade, index) => (
                   <tr key={index} className={trade.type === 'buy' ? 'trade-buy' : 'trade-sell'}>
                     <td>{trade.timestamp?.slice(0, 16) || '-'}</td>
                     <td>
                       <span className={`trade-type ${trade.type}`}>
-                        {trade.type === 'buy' ? '买入' : '卖出'}
+                        {trade.type === 'buy' ? t('trades.buy') : t('trades.sell')}
                       </span>
                     </td>
                     <td>${trade.price?.toLocaleString() || 0}</td>
