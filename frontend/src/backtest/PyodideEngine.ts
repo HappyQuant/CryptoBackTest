@@ -352,17 +352,33 @@ def calculate_rsi(data: list, period: int = 14) -> float:
     return 100 - (100 / (1 + rs))
 
 def calculate_macd(data: list, fast: int = 12, slow: int = 26, signal: int = 9) -> tuple:
-    if len(data) < slow:
+    if len(data) < slow + signal:
         return None, None, None
 
-    ema_fast = calculate_ema(data, fast)
-    ema_slow = calculate_ema(data, slow)
+    ema_fast_list = []
+    ema_slow_list = []
+    macd_list = []
 
-    if ema_fast is None or ema_slow is None:
+    multiplier_fast = 2 / (fast + 1)
+    multiplier_slow = 2 / (slow + 1)
+    multiplier_signal = 2 / (signal + 1)
+
+    ema_fast = sum(data[:fast]) / fast
+    ema_slow = sum(data[:slow]) / slow
+
+    for i in range(slow, len(data)):
+        ema_fast = (data[i] - ema_fast) * multiplier_fast + ema_fast
+        ema_slow = (data[i] - ema_slow) * multiplier_slow + ema_slow
+        macd_list.append(ema_fast - ema_slow)
+
+    if len(macd_list) < signal:
         return None, None, None
 
-    macd_line = ema_fast - ema_slow
-    signal_line = macd_line * 0.9
+    signal_line = sum(macd_list[:signal]) / signal
+    for macd_val in macd_list[signal:]:
+        signal_line = (macd_val - signal_line) * multiplier_signal + signal_line
+
+    macd_line = macd_list[-1]
     histogram = macd_line - signal_line
 
     return macd_line, signal_line, histogram

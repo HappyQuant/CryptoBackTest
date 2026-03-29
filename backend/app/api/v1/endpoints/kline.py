@@ -49,8 +49,8 @@ async def get_klines(
     request: Request,
     symbol: str,
     interval: str,
-    start_time: Optional[datetime] = None,
-    end_time: Optional[datetime] = None,
+    start_time: Optional[datetime] = Query(None),
+    end_time: Optional[datetime] = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_async_db)
 ):

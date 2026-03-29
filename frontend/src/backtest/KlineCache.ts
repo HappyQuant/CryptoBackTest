@@ -46,10 +46,17 @@ export class KlineCache {
         
         this.startTime = lastKline.open_time;
 
-        if (response.data.length < PAGE_SIZE) {
+        const lastTime = new Date(lastKline.open_time).getTime();
+        const endTimeMs = new Date(this.endTime).getTime();
+        
+        console.log(`Time check: lastTime=${lastTime}, endTimeMs=${endTimeMs}, lastTime >= endTimeMs: ${lastTime >= endTimeMs}`);
+        
+        if (response.data.length < PAGE_SIZE || lastTime >= endTimeMs) {
+          console.log('No more data: setting hasMore to false');
           this.hasMore = false;
         }
       } else {
+        console.log('No data returned: setting hasMore to false');
         this.hasMore = false;
       }
     } catch (error) {
