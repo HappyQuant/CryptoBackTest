@@ -24,10 +24,12 @@ class Strategy(IStrategy):
         ma = calculate_sma(closes, params.get('ma_period', 20))
 
         if closes[-1] > ma and closes[-2] <= ma:
-            context.buy(kline.close, params.get('buy_amount', 0.1), kline.open_time)
+            if context.position == 0:
+                context.buy(kline.close, params.get('buy_amount', 0.1), kline.open_time)
 
         if closes[-1] < ma and closes[-2] >= ma:
-            context.sell_all(kline.close, kline.open_time)
+            if context.position > 0:
+                context.sell_all(kline.close, kline.open_time)
 `;
 
 export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: StrategyEditorProps) {

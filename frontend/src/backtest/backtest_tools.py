@@ -178,7 +178,6 @@ class BacktestContext:
             })
             
             self.buy_cost += total_cost
-            self.update_equity_curve(timestamp, price)
             self.record_history()
             
             return True
@@ -215,7 +214,6 @@ class BacktestContext:
                 'fee': float(fee)
             })
             
-            self.update_equity_curve(timestamp, price)
             self.record_history()
             
             return True

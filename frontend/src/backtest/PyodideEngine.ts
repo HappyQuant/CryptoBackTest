@@ -159,7 +159,6 @@ class BacktestContext:
             self._trade_buffer.append(trade)
 
             self.buy_cost += total_cost
-            self.update_equity_curve(timestamp, price)
             self.record_history()
 
             return True
@@ -197,7 +196,6 @@ class BacktestContext:
             self.trades.append(trade)
             self._trade_buffer.append(trade)
 
-            self.update_equity_curve(timestamp, price)
             self.record_history()
 
             return True
@@ -705,7 +703,7 @@ result = {
     'profit': float(context.get_equity(${klineDataList[klineDataList.length - 1].close}) - context.initial_balance),
     'profitRate': float((context.get_equity(${klineDataList[klineDataList.length - 1].close}) - context.initial_balance) / context.initial_balance),
     'maxDrawdown': float(context.max_drawdown),
-    'maxDrawdownRate': float(context.max_drawdown / context.initial_balance) if context.initial_balance > 0 else 0,
+    'maxDrawdownRate': float(context.max_drawdown),
     'totalTrades': len(context.trades),
     'winRate': sum(1 for t in context.trades if t['type'] == 'sell' and t['price'] * t['amount'] > 0) / len([t for t in context.trades if t['type'] == 'sell']) if len([t for t in context.trades if t['type'] == 'sell']) > 0 else 0,
     'baseAsset': float(context.position)
