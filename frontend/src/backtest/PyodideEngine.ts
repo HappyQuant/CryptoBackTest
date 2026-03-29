@@ -562,7 +562,8 @@ export async function runBacktestWithProgress(
   feeRate: number,
   onProgress: (progress: BacktestProgress) => void,
   batchSize: number = 10,
-  delayMs: number = 50
+  delayMs: number = 50,
+  shouldAbort?: () => boolean
 ): Promise<BacktestResult> {
   if (!pyodideInstance) {
     throw new Error('Pyodide not initialized');
@@ -625,9 +626,16 @@ except Exception as e:
   const totalKlines = klineDataList.length;
 
   for (let i = 0; i < klineDataList.length; i += batchSize) {
+    if (shouldAbort && shouldAbort()) {
+      break;
+    }
+
     const batch = klineDataList.slice(i, Math.min(i + batchSize, klineDataList.length));
 
     for (const klineData of batch) {
+      if (shouldAbort && shouldAbort()) {
+        break;
+      }
       try {
         pyodideInstance!.runPython(`
 kline = Kline({

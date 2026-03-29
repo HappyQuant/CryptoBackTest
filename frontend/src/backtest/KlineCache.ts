@@ -37,18 +37,8 @@ export class KlineCache {
       });
 
       if (response.data && response.data.length > 0) {
-        const existingTimes = new Set(this.klines.map(k => k.open_time));
-        const newKlines = response.data.filter(k => !existingTimes.has(k.open_time));
-        
-        if (newKlines.length > 0) {
-          this.klines = [...this.klines, ...newKlines];
-          this.klines.sort((a, b) => new Date(a.open_time).getTime() - new Date(b.open_time).getTime());
-        }
+        this.klines = [...this.klines, ...response.data];
         this.lastFetchCount = response.data.length;
-
-        if (newKlines.length !== response.data.length) {
-          console.warn(`Filtered ${response.data.length - newKlines.length} duplicate klines`);
-        }
 
         const lastKline = response.data[response.data.length - 1];
         const firstKline = response.data[0];

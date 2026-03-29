@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useI18n, strategyTemplates } from '../i18n';
 import { BacktestConfig } from './BacktestConfig';
 import { StrategyEditor } from './StrategyEditor';
@@ -37,6 +37,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [progress, setProgress] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const abortRef = useRef(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -86,6 +87,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
       return;
     }
 
+    abortRef.current = false;
     setIsRunning(true);
     setKlines([]);
     setTrades([]);
@@ -104,10 +106,12 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
 
       const allKlines: Kline[] = [];
 
-      while (!cache.isDone()) {
+      while (!cache.isDone() && !abortRef.current) {
         if (cache.hasLowBuffer() && cache.hasMoreData() && !cache.isLoadingData()) {
           await cache.fetchNextBatch();
         }
+
+        if (abortRef.current) break;
 
         const kline = cache.next();
         if (!kline) {
@@ -126,6 +130,11 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
         }
       }
 
+      if (abortRef.current) {
+        setProgress(language === 'zh' ? '回测已停止' : 'Backtest stopped');
+        return;
+      }
+
       setKlines(allKlines);
       setProgress(language === 'zh' ? `共加载 ${allKlines.length} 根K线，开始回测...` : `Loaded ${allKlines.length} K-lines, starting backtest...`);
 
@@ -141,6 +150,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
         config.initialBalance,
         config.feeRate,
         (progressInfo) => {
+          if (abortRef.current) return;
           const progressText = language === 'zh' 
             ? `回测进度: ${progressInfo.processedKlines}/${progressInfo.totalKlines} (${Math.round(progressInfo.processedKlines / progressInfo.totalKlines * 100)}%)`
             : `Backtest progress: ${progressInfo.processedKlines}/${progressInfo.totalKlines} (${Math.round(progressInfo.processedKlines / progressInfo.totalKlines * 100)}%)`;
@@ -163,8 +173,14 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
           });
         },
         10,
-        50
+        50,
+        () => abortRef.current
       );
+
+      if (abortRef.current) {
+        setProgress(language === 'zh' ? '回测已停止' : 'Backtest stopped');
+        return;
+      }
 
       console.log('Backtest result:', backtestResult);
       console.log('Equity curve length:', backtestResult.equityCurve?.length);
@@ -186,6 +202,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
   }, [config, code, isPyodideReady, language]);
 
   const handleStop = useCallback(() => {
+    abortRef.current = true;
     setIsRunning(false);
     setProgress('');
   }, []);
