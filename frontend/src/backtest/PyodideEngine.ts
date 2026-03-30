@@ -452,26 +452,10 @@ export function runBacktest(
     .replace(/'''/g, "\\'\\'\\'");
 
   pyodideInstance!.runPython(`
-exec_globals = {
-    'IStrategy': IStrategy,
-    'KlineCache': KlineCache,
-    'Kline': Kline,
-    'Order': Order,
-    'OrderType': OrderType,
-    'BacktestContext': BacktestContext,
-    'deque': deque,
-    'Decimal': Decimal,
-    'datetime': datetime,
-    'calculate_sma': calculate_sma,
-    'calculate_ema': calculate_ema,
-    'calculate_rsi': calculate_rsi,
-    'calculate_macd': calculate_macd,
-}
-exec_locals = {}
 strategy_code = '''${escapedCode}'''
 try:
-    exec(strategy_code, exec_globals, exec_locals)
-    Strategy = exec_locals.get('Strategy')
+    exec(strategy_code, globals())
+    Strategy = globals().get('Strategy')
     if Strategy is None:
         raise NameError("Strategy class not found in strategy code")
     strategy = Strategy()
@@ -643,26 +627,10 @@ export async function runBacktestWithProgress(
     .replace(/'''/g, "\\'\\'\\'");
 
   pyodideInstance!.runPython(`
-exec_globals = {
-    'IStrategy': IStrategy,
-    'KlineCache': KlineCache,
-    'Kline': Kline,
-    'Order': Order,
-    'OrderType': OrderType,
-    'BacktestContext': BacktestContext,
-    'deque': deque,
-    'Decimal': Decimal,
-    'datetime': datetime,
-    'calculate_sma': calculate_sma,
-    'calculate_ema': calculate_ema,
-    'calculate_rsi': calculate_rsi,
-    'calculate_macd': calculate_macd,
-}
-exec_locals = {}
 strategy_code = '''${escapedCode}'''
 try:
-    exec(strategy_code, exec_globals, exec_locals)
-    Strategy = exec_locals.get('Strategy')
+    exec(strategy_code, globals())
+    Strategy = globals().get('Strategy')
     if Strategy is None:
         raise NameError("Strategy class not found in strategy code")
     strategy = Strategy()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, Time } from 'lightweight-charts';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, HistogramData, Time, CrosshairMode } from 'lightweight-charts';
 import { useI18n } from '../i18n';
 import type { Kline, Trade } from './types';
 import './TradingViewChart.css';
@@ -16,47 +16,118 @@ interface CrosshairData {
   high: number;
   low: number;
   close: number;
+  volume?: number;
 }
 
 const lightTheme = {
   layout: {
-    background: { color: '#ffffff' },
-    textColor: '#475569',
+    background: { type: 'solid', color: '#ffffff' },
+    textColor: '#333',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontSize: 12,
   },
   grid: {
-    vertLines: { color: 'rgba(0, 0, 0, 0.06)' },
-    horzLines: { color: 'rgba(0, 0, 0, 0.06)' },
+    vertLines: { color: 'rgba(0, 0, 0, 0.04)' },
+    horzLines: { color: 'rgba(0, 0, 0, 0.04)' },
   },
   crosshair: {
-    mode: 1,
+    mode: CrosshairMode.Normal,
+    vertLine: {
+      color: 'rgba(59, 130, 246, 0.5)',
+      width: 1,
+      style: 2,
+      labelBackgroundColor: '#3b82f6',
+    },
+    horzLine: {
+      color: 'rgba(59, 130, 246, 0.5)',
+      width: 1,
+      style: 2,
+      labelBackgroundColor: '#3b82f6',
+    },
   },
   timeScale: {
     borderColor: 'rgba(0, 0, 0, 0.1)',
     visible: true,
+    timeVisible: true,
+    secondsVisible: false,
+    tickMarkFormatter: (time: Time) => {
+      const date = new Date(time as string);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    },
   },
   rightPriceScale: {
     borderColor: 'rgba(0, 0, 0, 0.1)',
+    scaleMargins: {
+      top: 0.1,
+      bottom: 0.2,
+    },
+  },
+  handleScroll: {
+    vertTouchDrag: true,
+    horzTouchDrag: true,
+    mouseWheel: true,
+    pressedMouseMove: true,
+  },
+  handleScale: {
+    axisPressedMouseMove: true,
+    mouseWheel: true,
+    pinch: true,
   },
 };
 
 const darkTheme = {
   layout: {
-    background: { color: '#12121a' },
-    textColor: '#a1a1aa',
+    background: { type: 'solid', color: '#131722' },
+    textColor: '#d1d4dc',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontSize: 12,
   },
   grid: {
-    vertLines: { color: 'rgba(255, 255, 255, 0.06)' },
-    horzLines: { color: 'rgba(255, 255, 255, 0.06)' },
+    vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
+    horzLines: { color: 'rgba(255, 255, 255, 0.04)' },
   },
   crosshair: {
-    mode: 1,
+    mode: CrosshairMode.Normal,
+    vertLine: {
+      color: 'rgba(59, 130, 246, 0.6)',
+      width: 1,
+      style: 2,
+      labelBackgroundColor: '#3b82f6',
+    },
+    horzLine: {
+      color: 'rgba(59, 130, 246, 0.6)',
+      width: 1,
+      style: 2,
+      labelBackgroundColor: '#3b82f6',
+    },
   },
   timeScale: {
     borderColor: 'rgba(255, 255, 255, 0.1)',
     visible: true,
+    timeVisible: true,
+    secondsVisible: false,
+    tickMarkFormatter: (time: Time) => {
+      const date = new Date(time as string);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    },
   },
   rightPriceScale: {
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    scaleMargins: {
+      top: 0.1,
+      bottom: 0.2,
+    },
+  },
+  handleScroll: {
+    vertTouchDrag: true,
+    horzTouchDrag: true,
+    mouseWheel: true,
+    pressedMouseMove: true,
+  },
+  handleScale: {
+    axisPressedMouseMove: true,
+    mouseWheel: true,
+    pinch: true,
   },
 };
 
@@ -75,6 +146,7 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
   const chartRef = useRef<IChartApi | null>(null);
   const equityChartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const equitySeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const [isDark, setIsDark] = useState(false);
   const [chartsReady, setChartsReady] = useState(false);
@@ -110,20 +182,34 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
     });
 
     const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#10b981',
-      downColor: '#f43f5e',
-      borderUpColor: '#10b981',
-      borderDownColor: '#f43f5e',
-      wickUpColor: '#10b981',
-      wickDownColor: '#f43f5e',
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      borderUpColor: '#26a69a',
+      borderDownColor: '#ef5350',
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
+    });
+
+    const volumeSeries = chart.addHistogramSeries({
+      color: '#26a69a',
+      priceFormat: {
+        type: 'volume',
+      },
+      priceScaleId: '',
+      scaleMargins: {
+        top: 0.8,
+        bottom: 0,
+      },
     });
 
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
+    volumeSeriesRef.current = volumeSeries;
 
     chart.subscribeCrosshairMove((param) => {
       if (param && param.seriesData && param.seriesData.size > 0) {
         const data = param.seriesData.get(candlestickSeries);
+        const volumeData = param.seriesData.get(volumeSeries);
         if (data) {
           setCrosshairData({
             time: data.time as string,
@@ -131,6 +217,7 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
             high: data.high,
             low: data.low,
             close: data.close,
+            volume: volumeData ? (volumeData as HistogramData).value : undefined,
           });
         }
       } else {
@@ -157,6 +244,7 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
         chartRef.current.remove();
         chartRef.current = null;
         candlestickSeriesRef.current = null;
+        volumeSeriesRef.current = null;
       }
     };
   }, [isDark]);
@@ -232,6 +320,7 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
 
     try {
       const timeMap = new Map<string, CandlestickData>();
+      const volumeMap = new Map<string, HistogramData>();
       
       klines.forEach((k) => {
         const time = formatTimeToUTC(k.open_time);
@@ -243,6 +332,11 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
             low: k.low,
             close: k.close,
           });
+          volumeMap.set(time, {
+            time: time as Time,
+            value: k.volume,
+            color: k.close >= k.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)',
+          });
         }
       });
 
@@ -252,7 +346,14 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
         return timeA - timeB;
       });
 
+      const volumeData = Array.from(volumeMap.values()).sort((a, b) => {
+        const timeA = typeof a.time === 'string' ? new Date(a.time).getTime() : (a.time as number);
+        const timeB = typeof b.time === 'string' ? new Date(b.time).getTime() : (b.time as number);
+        return timeA - timeB;
+      });
+
       candlestickSeriesRef.current.setData(candleData);
+      volumeSeriesRef.current?.setData(volumeData);
       chartRef.current?.timeScale().fitContent();
     } catch (err) {
       console.error('Failed to set candlestick data:', err);
@@ -348,6 +449,12 @@ export function TradingViewChart({ klines, trades, equityCurve }: TradingViewCha
             <span className="ohl-value">{crosshairData.low.toLocaleString()}</span>
             <span className="ohl-label c">C</span>
             <span className="ohl-value">{crosshairData.close.toLocaleString()}</span>
+            {crosshairData.volume !== undefined && (
+              <>
+                <span className="ohl-label v">V</span>
+                <span className="ohl-value">{crosshairData.volume.toLocaleString()}</span>
+              </>
+            )}
           </div>
         )}
       </div>

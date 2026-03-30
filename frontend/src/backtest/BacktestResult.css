@@ -37,10 +37,11 @@
 }
 
 .result-title {
-  font-size: var(--text-base, 1rem);
+  font-size: var(--text-base, 0.875rem);
   font-weight: 600;
   color: var(--text-primary, #0f172a);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .metrics-grid {
@@ -68,10 +69,11 @@
 }
 
 .metric-value {
-  font-size: var(--text-lg, 1.125rem);
+  font-size: var(--text-lg, 1rem);
   font-weight: 600;
   font-family: var(--font-mono, 'JetBrains Mono', monospace);
   color: var(--text-primary, #0f172a);
+  letter-spacing: -0.02em;
 }
 
 .metric-value.positive {
@@ -245,9 +247,12 @@
   background: var(--bg-secondary, #f8fafc);
   padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
   text-align: left;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: var(--text-xs, 0.75rem);
   color: var(--text-secondary, #475569);
   border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .trades-list-table td {

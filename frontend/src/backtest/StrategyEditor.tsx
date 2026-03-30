@@ -10,11 +10,19 @@ interface StrategyEditorProps {
   onOpenDocs?: () => void;
 }
 
+const MIN_FONT_SIZE = 10;
+const MAX_FONT_SIZE = 24;
+const DEFAULT_FONT_SIZE = 13;
+
 export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: StrategyEditorProps) {
   const { t, language } = useI18n();
   const [lineCount, setLineCount] = useState(1);
   const [highlightedCode, setHighlightedCode] = useState('');
   const [isUserModified, setIsUserModified] = useState(false);
+  const [fontSize, setFontSize] = useState(() => {
+    const saved = localStorage.getItem('strategy-font-size');
+    return saved ? parseInt(saved, 10) : DEFAULT_FONT_SIZE;
+  });
   const prevLanguageRef = useRef(language);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const codeRef = useRef<HTMLPreElement>(null);
@@ -30,6 +38,10 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
     }
     prevLanguageRef.current = language;
   }, [language, isUserModified, onChange]);
+
+  useEffect(() => {
+    localStorage.setItem('strategy-font-size', fontSize.toString());
+  }, [fontSize]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -67,6 +79,18 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
     }
   };
 
+  const handleZoomIn = () => {
+    setFontSize(prev => Math.min(prev + 1, MAX_FONT_SIZE));
+  };
+
+  const handleZoomOut = () => {
+    setFontSize(prev => Math.max(prev - 1, MIN_FONT_SIZE));
+  };
+
+  const handleResetFontSize = () => {
+    setFontSize(DEFAULT_FONT_SIZE);
+  };
+
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
 
   return (
@@ -85,7 +109,7 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
         </div>
       </div>
       <div className="editor-container">
-        <div className="line-numbers" ref={lineNumbersRef}>
+        <div className="line-numbers" ref={lineNumbersRef} style={{ fontSize: `${fontSize}px` }}>
           {lineNumbers.map((num) => (
             <span key={num} className="line-number">
               {num}
@@ -93,7 +117,12 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
           ))}
         </div>
         <div className="code-container">
-          <pre className="code-highlight" ref={codeRef} dangerouslySetInnerHTML={{ __html: highlightedCode + '\n' }} />
+          <pre 
+            className="code-highlight" 
+            ref={codeRef} 
+            dangerouslySetInnerHTML={{ __html: highlightedCode + '\n' }}
+            style={{ fontSize: `${fontSize}px` }}
+          />
           <textarea
             className="code-textarea"
             value={code}
@@ -106,7 +135,29 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
+            style={{ fontSize: `${fontSize}px` }}
           />
+        </div>
+        <div className="font-size-controls">
+          <button 
+            className="font-size-btn" 
+            onClick={handleZoomOut} 
+            disabled={fontSize <= MIN_FONT_SIZE}
+            title={t('editor.zoomOut') || '缩小'}
+          >
+            −
+          </button>
+          <span className="font-size-display" onClick={handleResetFontSize} title={t('editor.resetFontSize') || '重置'}>
+            {fontSize}
+          </span>
+          <button 
+            className="font-size-btn" 
+            onClick={handleZoomIn} 
+            disabled={fontSize >= MAX_FONT_SIZE}
+            title={t('editor.zoomIn') || '放大'}
+          >
+            +
+          </button>
         </div>
       </div>
     </div>

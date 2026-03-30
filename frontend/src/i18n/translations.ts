@@ -41,6 +41,9 @@ const zh: Translations = {
     loadTemplate: '加载模板',
     strategyManual: '策略手册',
     placeholder: '在这里编写你的Python策略代码...',
+    zoomIn: '放大字体',
+    zoomOut: '缩小字体',
+    resetFontSize: '重置字体大小',
   },
   chart: {
     klineChart: 'K线图表',
@@ -131,6 +134,9 @@ const en: Translations = {
     loadTemplate: 'Load Template',
     strategyManual: 'Strategy Manual',
     placeholder: 'Write your Python strategy code here...',
+    zoomIn: 'Zoom In',
+    zoomOut: 'Zoom Out',
+    resetFontSize: 'Reset Font Size',
   },
   chart: {
     klineChart: 'K-line Chart',
