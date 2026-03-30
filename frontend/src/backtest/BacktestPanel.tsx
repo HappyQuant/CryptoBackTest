@@ -4,12 +4,13 @@ import { BacktestConfig } from './BacktestConfig';
 import { StrategyEditor } from './StrategyEditor';
 import { TradingViewChart } from './TradingViewChart';
 import { BacktestResultDisplay } from './BacktestResult';
+import { TerminalOutput, TerminalLine } from './TerminalOutput';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import type { BacktestConfig as Config, BacktestResult, Kline, Trade } from './types';
 import { getSymbols, getIntervals } from './KlineService';
 import { KlineCache } from './KlineCache';
-import { initializePyodide, loadBacktestTools, runBacktestWithProgress, BacktestProgress } from './PyodideEngine';
+import { initializePyodide, loadBacktestTools, runBacktestWithProgress, setOutputCallback } from './PyodideEngine';
 import './BacktestPanel.css';
 
 interface BacktestPanelProps {
@@ -27,6 +28,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
     endTime: '2024-12-31T23:59:59',
     initialBalance: 10000,
     feeRate: 0.001,
+    klineWndSize: 50,
   });
   const [code, setCode] = useState<string>(() => strategyTemplates[language]);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +39,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [progress, setProgress] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([]);
   const abortRef = useRef(false);
 
   useEffect(() => {
@@ -79,6 +82,19 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
     };
 
     initPyodide();
+  }, []);
+
+  useEffect(() => {
+    setOutputCallback((line: TerminalLine) => {
+      setTerminalLines(prev => [...prev, line]);
+    });
+    return () => {
+      setOutputCallback(null);
+    };
+  }, []);
+
+  const handleClearTerminal = useCallback(() => {
+    setTerminalLines([]);
   }, []);
 
   const handleStart = useCallback(async () => {
@@ -174,7 +190,8 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
         },
         10,
         50,
-        () => abortRef.current
+        () => abortRef.current,
+        config.klineWndSize
       );
 
       if (abortRef.current) {
@@ -251,6 +268,12 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
               isRunning={isRunning}
               onOpenDocs={onOpenDocs}
             />
+            <div className="terminal-section">
+              <TerminalOutput
+                lines={terminalLines}
+                onClear={handleClearTerminal}
+              />
+            </div>
           </div>
         </div>
 

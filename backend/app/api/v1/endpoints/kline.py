@@ -13,6 +13,14 @@ from app.schemas.kline import KlineListResponse, KlineSingleResponse, KlineBatch
 router = APIRouter()
 
 
+def ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 async def check_table_exists(symbol: str, interval: str) -> bool:
     clean_symbol = symbol.replace("-", "_").replace("/", "_").lower()
     clean_interval = interval.replace("-", "_").replace("/", "_").lower()
@@ -68,6 +76,9 @@ async def get_klines(
         }
 
     KlineModel = get_kline_model(symbol, interval)
+
+    start_time = ensure_utc(start_time)
+    end_time = ensure_utc(end_time)
 
     query = select(KlineModel)
 
@@ -240,6 +251,9 @@ async def get_klines_batch(
         }
 
     KlineModel = get_kline_model(symbol, interval)
+
+    start_time = ensure_utc(start_time)
+    end_time = ensure_utc(end_time)
 
     query = select(KlineModel).where(
         and_(

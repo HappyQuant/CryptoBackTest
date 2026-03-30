@@ -116,6 +116,20 @@ export function BacktestConfigComponent({
             disabled={isRunning}
           />
         </div>
+
+        <div className="form-group">
+          <label className="form-label">K线窗口大小</label>
+          <input
+            type="number"
+            className="input"
+            value={config.klineWndSize}
+            onChange={(e) => handleChange('klineWndSize', parseInt(e.target.value) || 50)}
+            min={10}
+            max={500}
+            step={10}
+            disabled={isRunning}
+          />
+        </div>
       </div>
 
       <div className="config-actions">

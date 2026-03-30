@@ -1,8 +1,10 @@
 import { loadPyodide, PyodideInterface } from 'pyodide';
 import type { Kline, BacktestResult, Trade, EquityPoint, DrawdownPoint } from './types';
+import type { TerminalLine } from './TerminalOutput';
 
 let pyodideInstance: PyodideInterface | null = null;
 let backtestToolsLoaded = false;
+let outputCallback: ((line: TerminalLine) => void) | null = null;
 
 export interface BacktestProgress {
   processedKlines: number;
@@ -12,6 +14,20 @@ export interface BacktestProgress {
   currentEquity: number;
 }
 
+export function setOutputCallback(callback: ((line: TerminalLine) => void) | null): void {
+  outputCallback = callback;
+}
+
+function emitOutput(type: TerminalLine['type'], content: string): void {
+  if (outputCallback && content.trim()) {
+    outputCallback({
+      type,
+      content: content.trim(),
+      timestamp: Date.now(),
+    });
+  }
+}
+
 export async function initializePyodide(): Promise<void> {
   if (pyodideInstance) {
     return;
@@ -19,6 +35,18 @@ export async function initializePyodide(): Promise<void> {
 
   pyodideInstance = await loadPyodide({
     indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/',
+  });
+
+  pyodideInstance.setStdout({
+    batched: (text: string) => {
+      emitOutput('stdout', text);
+    },
+  });
+
+  pyodideInstance.setStderr({
+    batched: (text: string) => {
+      emitOutput('stderr', text);
+    },
   });
 
   await pyodideInstance.loadPackage(['numpy']);
@@ -549,6 +577,8 @@ new_trades = context.get_new_trades()
 
   const finalPrice = klineDataList[klineDataList.length - 1].close;
 
+  emitOutput('info', `Backtest completed: ${result.totalTrades} trades, ${(result.profitRate * 100).toFixed(2)}% return`);
+
   return {
     initialBalance: result.initialBalance,
     finalBalance: result.finalBalance,
@@ -569,6 +599,7 @@ new_trades = context.get_new_trades()
 export function resetPyodide(): void {
   pyodideInstance = null;
   backtestToolsLoaded = false;
+  outputCallback = null;
 }
 
 export async function runBacktestWithProgress(
@@ -579,7 +610,8 @@ export async function runBacktestWithProgress(
   onProgress: (progress: BacktestProgress) => void,
   batchSize: number = 10,
   delayMs: number = 50,
-  shouldAbort?: () => boolean
+  shouldAbort?: () => boolean,
+  klineWndSize: number = 50
 ): Promise<BacktestResult> {
   if (!pyodideInstance) {
     throw new Error('Pyodide not initialized');
@@ -602,6 +634,9 @@ export async function runBacktestWithProgress(
       finalPrice: 0,
     };
   }
+
+  emitOutput('info', `Starting backtest with ${klineDataList.length} klines...`);
+  emitOutput('info', `Initial balance: ${initialBalance}, Fee rate: ${feeRate * 100}%`);
 
   const escapedCode = strategyCode
     .replace(/\\/g, '\\\\')
@@ -631,13 +666,15 @@ try:
     if Strategy is None:
         raise NameError("Strategy class not found in strategy code")
     strategy = Strategy()
-    strategy.initialize(50)
+    strategy.initialize(${klineWndSize})
     context = BacktestContext(${initialBalance}, ${feeRate})
 except Exception as e:
     import traceback
     traceback.print_exc()
     raise
   `);
+
+  emitOutput('info', 'Strategy initialized successfully');
 
   const totalKlines = klineDataList.length;
 

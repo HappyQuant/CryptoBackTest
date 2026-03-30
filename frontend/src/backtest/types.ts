@@ -15,6 +15,7 @@ export interface BacktestConfig {
   endTime: string;
   initialBalance: number;
   feeRate: number;
+  klineWndSize: number;
 }
 
 export interface Trade {

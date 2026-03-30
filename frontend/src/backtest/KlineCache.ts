@@ -3,6 +3,14 @@ import { getKlines } from './KlineService';
 
 const PAGE_SIZE = 1000;
 
+function parseTimeToMs(timeStr: string): number {
+  if (timeStr.includes('+') || timeStr.includes('Z')) {
+    return new Date(timeStr).getTime();
+  }
+  const utcStr = timeStr.replace('T', ' ') + '+00:00';
+  return new Date(utcStr).getTime();
+}
+
 export class KlineCache {
   private symbol: string;
   private interval: string;
@@ -10,6 +18,7 @@ export class KlineCache {
   private index: number = 0;
   private startTime: string;
   private endTime: string;
+  private endTimeMs: number;
   private isLoading: boolean = false;
   private hasMore: boolean = true;
   private totalConsumed: number = 0;
@@ -20,6 +29,7 @@ export class KlineCache {
     this.interval = interval;
     this.startTime = startTime;
     this.endTime = endTime;
+    this.endTimeMs = parseTimeToMs(endTime);
   }
 
   async fetchNextBatch(): Promise<void> {
@@ -46,12 +56,11 @@ export class KlineCache {
         
         this.startTime = lastKline.open_time;
 
-        const lastTime = new Date(lastKline.open_time).getTime();
-        const endTimeMs = new Date(this.endTime).getTime();
+        const lastTime = parseTimeToMs(lastKline.open_time);
         
-        console.log(`Time check: lastTime=${lastTime}, endTimeMs=${endTimeMs}, lastTime >= endTimeMs: ${lastTime >= endTimeMs}`);
+        console.log(`Time check: lastTime=${lastTime}, endTimeMs=${this.endTimeMs}, lastTime >= endTimeMs: ${lastTime >= this.endTimeMs}`);
         
-        if (response.data.length < PAGE_SIZE || lastTime >= endTimeMs) {
+        if (response.data.length < PAGE_SIZE || lastTime >= this.endTimeMs) {
           console.log('No more data: setting hasMore to false');
           this.hasMore = false;
         }
