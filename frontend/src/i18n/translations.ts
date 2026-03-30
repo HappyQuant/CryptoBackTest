@@ -85,6 +85,13 @@ const zh: Translations = {
     clear: '清空',
     emptyText: '暂无输出。运行策略后在此显示结果。',
   },
+  loading: {
+    title: '正在初始化运行环境',
+    pyodide: '加载 Python 运行时 (Pyodide)...',
+    tools: '加载回测工具...',
+    ready: '准备就绪',
+    hint: '首次加载可能需要 10-30 秒，请耐心等待',
+  },
 };
 
 const en: Translations = {
@@ -167,6 +174,13 @@ const en: Translations = {
     title: 'Terminal',
     clear: 'Clear',
     emptyText: 'No output yet. Run your strategy to see results.',
+  },
+  loading: {
+    title: 'Initializing Runtime Environment',
+    pyodide: 'Loading Python Runtime (Pyodide)...',
+    tools: 'Loading Backtest Tools...',
+    ready: 'Ready',
+    hint: 'First load may take 10-30 seconds, please wait',
   },
 };
 

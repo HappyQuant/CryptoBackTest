@@ -53,6 +53,20 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
     onChange(strategyTemplates[language]);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const textarea = e.currentTarget;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newCode = code.substring(0, start) + '    ' + code.substring(end);
+      onChange(newCode);
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + 4;
+      }, 0);
+    }
+  };
+
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
 
   return (
@@ -84,6 +98,7 @@ export function StrategyEditor({ code, onChange, isRunning, onOpenDocs }: Strate
             className="code-textarea"
             value={code}
             onChange={handleChange}
+            onKeyDown={handleKeyDown}
             onScroll={handleScroll}
             disabled={isRunning}
             spellCheck={false}

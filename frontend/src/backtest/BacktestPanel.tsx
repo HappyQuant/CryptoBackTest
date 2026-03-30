@@ -23,7 +23,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
   const [intervals, setIntervals] = useState<string[]>([]);
   const [config, setConfig] = useState<Config>({
     symbol: 'BTCUSDT',
-    interval: '1h',
+    interval: '1d',
     startTime: '2024-01-01T00:00:00',
     endTime: '2024-12-31T23:59:59',
     initialBalance: 10000,
@@ -40,6 +40,7 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
   const [progress, setProgress] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([]);
+  const [loadingStep, setLoadingStep] = useState<string>('');
   const abortRef = useRef(false);
 
   useEffect(() => {
@@ -71,12 +72,17 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
     const initPyodide = async () => {
       try {
         setIsLoading(true);
+        setLoadingStep('pyodide');
         await initializePyodide();
+        setLoadingStep('tools');
         await loadBacktestTools();
-        setIsPyodideReady(true);
+        setLoadingStep('ready');
+        setTimeout(() => {
+          setIsPyodideReady(true);
+          setIsLoading(false);
+        }, 500);
       } catch (error) {
         console.error('Failed to initialize Pyodide:', error);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -226,6 +232,20 @@ export function BacktestPanel({ onOpenDocs }: BacktestPanelProps) {
 
   return (
     <div className="backtest-panel">
+      {!isPyodideReady && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="loading-spinner"></div>
+            <h2 className="loading-title">{t('loading.title')}</h2>
+            <p className="loading-step">
+              {loadingStep === 'pyodide' && t('loading.pyodide')}
+              {loadingStep === 'tools' && t('loading.tools')}
+              {loadingStep === 'ready' && t('loading.ready')}
+            </p>
+            <p className="loading-hint">{t('loading.hint')}</p>
+          </div>
+        </div>
+      )}
       <header className="panel-header">
         <div className="header-left">
           <h1 className="panel-title">{t('app.title')}</h1>

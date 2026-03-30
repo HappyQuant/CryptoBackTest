@@ -57,7 +57,7 @@
 .trades-section {
   padding: 12px;
   border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
-  max-height: 300px;
+  max-height: 900px;
   overflow-y: auto;
 }
 
